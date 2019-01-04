@@ -1,12 +1,17 @@
+import os
+import copy
+
 from nxtools import *
 from nxtools.caspar import *
-
-import copy
 
 LIVE = -1
 
 
 __all__ = ["get_info_parser"]
+
+def basefname(fname):
+    """Platform dependent path splitter (caspar is always on win)"""
+    return os.path.splitext(fname.split("\\")[-1])[0]
 
 class BaseInfoParser(object):
     def __init__(self, caspar, channel, default_fps=25.0):
@@ -56,17 +61,116 @@ class BaseInfoParser(object):
 
 
 class Caspar207InfoParser(BaseInfoParser):
+    protocol = 2.07
+
     def parse(self, layer_index):
-        return None
+        try:
+            layers = self.data.find("stage").find("layers")
+        except:
+            return None
+        video_layer = None
+        for layer in layers.findall("layer"):
+            try:
+                index = int(layer.find("index").text)
+            except Exception:
+                logging.warning("Unable to get layer index")
+                return None
+            if index == layer_index:
+                video_layer = layer
+                break
+        else:
+            logging.warning("Layer index {} not found".format(layer_index))
+            return None
+
+        data = copy.deepcopy(self.defaults)
+        try:
+            fg_prod = video_layer.find("foreground").find("producer")
+            if fg_prod.find("type").text == "image-producer":
+                data["pos"] = 0
+                data["current"] = basefname(fg_prod.find("location").text)
+            elif fg_prod.find("type").text == "empty-producer":
+                data["current"] = False # No video is playing right now
+            else:
+                data["pos"] = int(fg_prod.find("file-frame-number").text)
+                data["dur"] = int(fg_prod.find("file-nb-frames").text)
+                data["current"] = basefname(fg_prod.find("filename").text)
+        except Exception:
+            pass
+
+
+        try:
+            bg_prod = video_layer.find("background").find("producer").find("destination").find("producer")
+            if bg_prod.find("type").text == "image-producer":
+                data["cued"] = basefname(bg_prod.find("location").text)
+            elif bg_prod.find("type").text == "empty-producer":
+                data["cued"] = False # No video is cued
+            else:
+                data["cued"] = basefname(bg_prod.find("filename").text)
+        except Exception:
+            data["cued"] = False
+
+        return data
+
+
+
 
 
 class Caspar21InfoParser(BaseInfoParser):
+    protocol = 2.1
+
     def parse(self, layer_index):
-        return None
+        try:
+            layers = self.data.find("stage").find("layers")
+        except:
+            return None
+        video_layer = None
+        for layer in layers.findall("layer"):
+            try:
+                index = int(layer.find("index").text)
+            except Exception:
+                logging.warning("Unable to get layer index")
+                return None
+            if index == layer_index:
+                video_layer = layer
+                break
+        else:
+            logging.warning("Layer index {} not found".format(layer_index))
+            return None
+
+        data = copy.deepcopy(self.defaults)
+        try:
+            fg_prod = video_layer.find("foreground").find("producer")
+            if fg_prod.find("type").text == "image-producer":
+                data["pos"] = 0
+                data["current"] = basefname(fg_prod.find("location").text)
+            elif fg_prod.find("type").text == "empty-producer":
+                data["current"] = False # No video is playing right now
+            else:
+                data["pos"] = int(fg_prod.find("file-frame-number").text)
+                data["dur"] = int(fg_prod.find("file-nb-frames").text)
+                data["current"] = basefname(fg_prod.find("filename").text)
+        except Exception:
+            pass
+
+
+        try:
+            bg_prod = video_layer.find("background").find("producer").find("destination").find("producer")
+            if bg_prod.find("type").text == "image-producer":
+                data["cued"] = basefname(bg_prod.find("location").text)
+            elif bg_prod.find("type").text == "empty-producer":
+                data["cued"] = False # No video is cued
+            else:
+                data["cued"] = basefname(bg_prod.find("filename").text)
+        except Exception:
+            data["cued"] = False
+
+        return data
 
 
 
 class Caspar22InfoParser(BaseInfoParser):
+    protocol = 2.2
+
     def load_seek_fps(self):
         self.refresh()
         frates = self.data.findall("framerate")
@@ -98,9 +202,12 @@ class Caspar22InfoParser(BaseInfoParser):
         if bg_producer == "empty":
             data["cued"] = False
         elif bg_producer in ["ffmpeg", "transition"]:
-            data["cued"] = get_base_name(bg.find("file").find("path").text)
+            try:
+                data["cued"] = get_base_name(bg.find("file").find("path").text)
+            except AttributeError:
+                data["cued"] == False
         else:
-            data["cued"] = LIVE
+            data["cued"] = False
 
         fg = feed_layer.find("foreground")
         fg_producer = fg.find("producer").text
@@ -130,7 +237,9 @@ class Caspar22InfoParser(BaseInfoParser):
                 data["pos"] = int(float(times[0].text) * fps)
                 data["dur"] = int(float(times[1].text) * fps)
         else:
-            data["current"] = LIVE
+            data["current"] = False
+            data["pos"] = 0
+            data["dur"] = 0
         return data
 
 

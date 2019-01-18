@@ -252,6 +252,7 @@ def get_info_parser(caspar):
         return False
 
     parsers = {
+            "2.3" : Caspar22InfoParser,
             "2.2" : Caspar22InfoParser,
             "2.1"   : Caspar21InfoParser,
             "2.0.7" : Caspar207InfoParser,

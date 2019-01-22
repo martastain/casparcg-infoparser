@@ -68,6 +68,8 @@ class Caspar207InfoParser(BaseInfoParser):
             layers = self.data.find("stage").find("layers")
         except:
             return None
+        if layers == None:
+            return None
         video_layer = None
         for layer in layers.findall("layer"):
             try:
@@ -122,6 +124,8 @@ class Caspar21InfoParser(BaseInfoParser):
         try:
             layers = self.data.find("stage").find("layers")
         except:
+            return None
+        if layers == None:
             return None
         video_layer = None
         for layer in layers.findall("layer"):

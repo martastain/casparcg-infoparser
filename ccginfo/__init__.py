@@ -115,6 +115,11 @@ class Caspar207InfoParser(BaseInfoParser):
 
 
 
+class Caspar206InfoParser(Caspar207InfoParser):
+    protocol = 2.06
+
+
+
 
 
 class Caspar21InfoParser(BaseInfoParser):
@@ -260,7 +265,7 @@ def get_info_parser(caspar):
             "2.2" : Caspar22InfoParser,
             "2.1"   : Caspar21InfoParser,
             "2.0.7" : Caspar207InfoParser,
-            "2.0.6" : Caspar207InfoParser, # Same xml as 2.0.7
+            "2.0.6" : Caspar206InfoParser, # Same xml as 2.0.7
         }
 
     Parser = None
